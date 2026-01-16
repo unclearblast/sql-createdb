@@ -1,0 +1,83 @@
+CREATE TABLE settlements (
+    settlement_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    region VARCHAR(100),
+    danger_level INT CHECK (danger_level BETWEEN 1 AND 10)
+);
+
+CREATE TABLE clients (
+    client_id SERIAL PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    settlement_id INT NOT NULL REFERENCES settlements(settlement_id),
+    faction VARCHAR(100)
+);
+
+CREATE TABLE cargo_types (
+    cargo_type_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    radioactive BOOLEAN NOT NULL,
+    base_price NUMERIC(10,2) NOT NULL CHECK (base_price >= 0)
+);
+
+CREATE TABLE vehicles (
+    vehicle_id SERIAL PRIMARY KEY,
+    model VARCHAR(100) NOT NULL,
+    max_capacity NUMERIC(10,2) NOT NULL CHECK (max_capacity > 0),
+    armor_level INT CHECK (armor_level BETWEEN 0 AND 10),
+    status VARCHAR(20) NOT NULL
+        CHECK (status IN ('active', 'destroyed', 'repair'))
+);
+
+CREATE TABLE drivers (
+    driver_id SERIAL PRIMARY KEY,
+    full_name VARCHAR(120) NOT NULL,
+    experience_level INT CHECK (experience_level BETWEEN 1 AND 10),
+    status VARCHAR(20) NOT NULL
+        CHECK (status IN ('available', 'injured', 'dead'))
+);
+
+
+CREATE TABLE routes (
+    route_id SERIAL PRIMARY KEY,
+    from_settlement_id INT NOT NULL REFERENCES settlements(settlement_id),
+    to_settlement_id INT NOT NULL REFERENCES settlements(settlement_id),
+    distance_km NUMERIC(8,2) NOT NULL CHECK (distance_km > 0),
+    UNIQUE (from_settlement_id, to_settlement_id)
+);
+
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    client_id INT NOT NULL REFERENCES clients(client_id),
+    route_id INT NOT NULL REFERENCES routes(route_id),
+    order_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL
+        CHECK (status IN ('created', 'in_progress', 'completed', 'cancelled'))
+);
+
+CREATE TABLE order_items (
+    order_id INT NOT NULL REFERENCES orders(order_id),
+    cargo_type_id INT NOT NULL REFERENCES cargo_types(cargo_type_id),
+    quantity NUMERIC(10,2) NOT NULL CHECK (quantity > 0),
+    PRIMARY KEY (order_id, cargo_type_id)
+);
+
+
+CREATE TABLE trips (
+    trip_id SERIAL PRIMARY KEY,
+    order_id INT NOT NULL REFERENCES orders(order_id),
+    vehicle_id INT NOT NULL REFERENCES vehicles(vehicle_id),
+    driver_id INT NOT NULL REFERENCES drivers(driver_id),
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP,
+    status VARCHAR(20) NOT NULL
+        CHECK (status IN ('planned', 'ongoing', 'completed', 'failed'))
+);
+
+CREATE TABLE trip_events (
+    event_id SERIAL PRIMARY KEY,
+    trip_id INT NOT NULL REFERENCES trips(trip_id),
+    event_time TIMESTAMP NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    description VARCHAR(200)
+);
